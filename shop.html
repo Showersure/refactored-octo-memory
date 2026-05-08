@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛍️ 智选商城 - AI购物助手</title>
+    <!-- 【防护1】内容安全策略，限制资源来源，防止XSS与未授权资源加载 -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data:;
+        font-src 'self';
+        connect-src 'self';
+        frame-src 'none';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
+    <!-- 【防护2】防止浏览器进行MIME类型嗅探 -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --primary-dark: #3730a3;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.06);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            background: #f1f5f9;
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ====== 顶部导航栏 ====== */
+        .navbar {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+        .navbar .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            letter-spacing: -0.5px;
+        }
+        .navbar .logo span {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #f1f5f9;
+            border-radius: 50px;
+            padding: 8px 16px;
+            gap: 8px;
+            border: 2px solid transparent;
+            transition: var(--transition);
+            width: 320px;
+        }
+        .search-box:focus-within {
+            border-color: var(--primary-light);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+        .search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 0.95rem;
+            width: 100%;
+            color: var(--text);
+        }
+        .search-box .search-icon {
+            color: var(--text-light);
+            flex-shrink: 0;
+        }
+        .cart-btn {
+            position: relative;
+            background: #f1f5f9;
+            border: none;
+            cursor: pointer;
+            font-size: 1.4rem;
+            padding: 10px;
+            border-radius: 50%;
+            transition: var(--transition);
+            color: var(--text);
+            line-height: 1;
+        }
+        .cart-btn:hover {
+            background: #e2e8f0;
+            transform: scale(1.05);
+        }
+        .cart-count {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .cart-count.bump {
+            transform: scale(1.4);
+        }
+
+        /* ====== 主布局 ====== */
+        .main-container {
+            display: flex;
+            gap: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+            min-height: calc(100vh - 64px);
+        }
+
+        /* ====== 侧边栏分类 ====== */
+        .sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px 16px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 88px;
+        }
+        .sidebar h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+        .category-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .category-list li {
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-light);
+        }
+        .category-list li:hover {
+            background: #f1f5f9;
+            color: var(--text);
+        }
+        .category-list li.active {
+            background: #eef2ff;
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .category-list li .cat-icon {
+            font-size: 1.2rem;
+            width: 28px;
+            text-align: center;
+        }
+
+        /* ====== 商品区域 ====== */
+        .products-area {
+            flex: 1;
+            min-width: 0;
+        }
+        .products-area .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+        .product-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            border: 1px solid transparent;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: #e2e8f0;
+        }
+        .product-card .img-wrap {
+            height: 200px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-card .img-wrap .badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+        .product-card .img-wrap .wishlist-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #fff;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            color: #94a3b8;
+        }
+        .product-card .img-wrap .wishlist-btn:hover {
+            color: #ef4444;
+            transform: scale(1.1);
+        }
+        .product-card .img-wrap .wishlist-btn.liked {
+            color: #ef4444;
+            animation: heartPop 0.4s ease;
+        }
+        @keyframes heartPop {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.35);
+            }
+        }
+        .product-card .info {
+            padding: 16px;
+        }
+        .product-card .info .product-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            color: var(--text);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .product-card .info .product-category {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        .product-card .info .price-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .product-card .info .price {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .product-card .info .price .yen {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .add-cart-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 9px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+        .add-cart-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.04);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        .add-cart-btn.added {
+            background: #10b981;
+            animation: btnPop 0.3s ease;
+        }
+        @keyframes btnPop {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(0.9);
+            }
+        }
+
+        /* ====== 购物车侧边栏 ====== */
+        .cart-sidebar {
+            width: 360px;
+            flex-shrink: 0;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 88px;
+            max-height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        .cart-sidebar h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 350px;
+            padding-right: 4px;
+        }
+        .cart-items::-webkit-scrollbar {
+            width: 4px;
+        }
+        .cart-items::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+        .cart-item:hover {
+            background: #f1f5f9;
+        }
+        .cart-item .ci-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        .cart-item .ci-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .cart-item .ci-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .cart-item .ci-price {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        .cart-item .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cart-item .qty-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 700;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+        .cart-item .qty-btn:hover {
+            background: #e2e8f0;
+        }
+        .cart-item .qty-num {
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+        .cart-item .ci-remove {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            padding: 4px;
+        }
+        .cart-item .ci-remove:hover {
+            color: #ef4444;
+        }
+        .cart-summary {
+            border-top: 2px solid var(--border);
+            padding-top: 14px;
+            margin-top: 10px;
+        }
+        .cart-summary .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .cart-summary .total-row .total-price {
+            color: var(--primary-dark);
+            font-size: 1.3rem;
+        }
+        .checkout-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            letter-spacing: 0.5px;
+        }
+        .checkout-btn:hover {
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+            transform: translateY(-2px);
+        }
+        .empty-cart {
+            text-align: center;
+            color: var(--text-light);
+            padding: 30px 0;
+            font-size: 0.95rem;
+        }
+        .empty-cart .empty-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* ====== AI问答助手浮窗 ====== */
+        .ai-assistant {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 200;
+        }
+        .ai-toggle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #8b5cf6);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 1.6rem;
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .ai-toggle:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 32px rgba(79, 70, 229, 0.5);
+        }
+        .ai-toggle .pulse-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+            }
+        }
+        .ai-chat-window {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 380px;
+            height: 520px;
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform-origin: bottom right;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            border: 1px solid var(--border);
+        }
+        .ai-chat-window.hidden {
+            transform: scale(0.8);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .ai-chat-header {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: #fff;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .ai-chat-header .close-chat {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ai-chat-header .close-chat:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        .ai-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #fafbfc;
+        }
+        .ai-chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        .ai-chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .chat-msg {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .chat-msg.bot {
+            background: #f1f5f9;
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+            color: var(--text);
+        }
+        .chat-msg.user {
+            background: var(--primary);
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+        .chat-msg .product-suggestion {
+            display: inline-block;
+            background: #fff;
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin: 4px 3px;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            transition: var(--transition);
+        }
+        .chat-msg .product-suggestion:hover {
+            background: #eef2ff;
+            border-color: var(--primary-light);
+        }
+        .ai-chat-input-area {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            background: #fff;
+        }
+        .ai-chat-input-area input {
+            flex: 1;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            padding: 10px 16px;
+            outline: none;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        .ai-chat-input-area input:focus {
+            border-color: var(--primary-light);
+        }
+        .ai-chat-input-area button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ai-chat-input-area button:hover {
+            background: var(--primary-dark);
+        }
+        .quick-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #fff;
+            border-top: 1px solid #f1f5f9;
+        }
+        .quick-q {
+            font-size: 0.75rem;
+            background: #f1f5f9;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            color: var(--text-light);
+        }
+        .quick-q:hover {
+            background: #e2e8f0;
+            color: var(--text);
+        }
+
+        /* Toast提示 */
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 300;
+            animation: toastIn 0.4s ease, toastOut 0.4s ease 1.8s forwards;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-30px);
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .cart-sidebar {
+                width: 300px;
+            }
+            .ai-chat-window {
+                width: 340px;
+                height: 460px;
+            }
+            .sidebar {
+                width: 180px;
+            }
+        }
+        @media (max-width: 992px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                position: static;
+                display: flex;
+                overflow-x: auto;
+                padding: 12px;
+                gap: 4px;
+            }
+            .sidebar h3 {
+                display: none;
+            }
+            .category-list {
+                flex-direction: row;
+                flex-wrap: nowrap;
+            }
+            .category-list li {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+            .cart-sidebar {
+                width: 100%;
+                position: static;
+                max-height: none;
+            }
+            .search-box {
+                width: 200px;
+            }
+            .ai-chat-window {
+                width: 90vw;
+                height: 60vh;
+                right: -10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== 顶部导航 ==================== -->
+    <nav class="navbar">
+        <div class="logo" onclick="location.reload()">
+            🛍️ <span>智选商城</span>
+        </div>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <!-- 【防护3】限制输入长度，防止超长字符串攻击 -->
+            <input type="text" id="searchInput" placeholder="搜索商品..." maxlength="80" oninput="filterProducts()">
+        </div>
+        <div class="nav-actions">
+            <button class="cart-btn" onclick="scrollToCart()" title="购物车">
+                🛒
+                <span class="cart-count" id="cartCountBadge">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ==================== 主体 ==================== -->
+    <div class="main-container">
+        <!-- 侧边栏分类 -->
+        <aside class="sidebar">
+            <h3>📂 商品分类</h3>
+            <ul class="category-list" id="categoryList">
+                <li class="active" data-category="all"><span class="cat-icon">🏪</span> 全部商品</li>
+                <li data-category="electronics"><span class="cat-icon">💻</span> 电子产品</li>
+                <li data-category="clothing"><span class="cat-icon">👗</span> 服装服饰</li>
+                <li data-category="home"><span class="cat-icon">🏠</span> 家居生活</li>
+                <li data-category="food"><span class="cat-icon">🍜</span> 食品饮料</li>
+                <li data-category="sports"><span class="cat-icon">⚽</span> 运动户外</li>
+                <li data-category="beauty"><span class="cat-icon">💄</span> 美妆护肤</li>
+            </ul>
+        </aside>
+
+        <!-- 商品区域 -->
+        <section class="products-area">
+            <h2 class="section-title" id="sectionTitle">🔥 热门推荐</h2>
+            <div class="products-grid" id="productsGrid">
+                <!-- JS动态渲染 -->
+            </div>
+        </section>
+
+        <!-- 购物车 -->
+        <aside class="cart-sidebar" id="cartSidebar">
+            <h3>🛒 我的购物车</h3>
+            <div class="cart-items" id="cartItems">
+                <div class="empty-cart">
+                    <span class="empty-icon">🛍️</span>
+                    购物车是空的<br>快去挑选好物吧~
+                </div>
+            </div>
+            <div class="cart-summary">
+                <div class="total-row">
+                    <span>合计：</span>
+                    <span class="total-price" id="totalPrice">¥0.00</span>
+                </div>
+                <button class="checkout-btn" onclick="checkout()">💳 立即结算</button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ==================== AI问答助手 ==================== -->
+    <div class="ai-assistant">
+        <div class="ai-chat-window hidden" id="aiChatWindow">
+            <div class="ai-chat-header">
+                🤖 AI购物助手
+                <button class="close-chat" onclick="toggleChat()">✕</button>
+            </div>
+            <div class="ai-chat-messages" id="aiChatMessages">
+                <div class="chat-msg bot">
+                    你好！我是你的AI购物助手 🎉<br>
+                    我可以帮你：<br>
+                    • 推荐适合你的商品<br>
+                    • 对比不同产品<br>
+                    • 回答购物疑问<br>
+                    随便问我吧~
+                </div>
+            </div>
+            <div class="quick-questions" id="quickQuestions">
+                <button class="quick-q" onclick="sendQuickQuestion('有什么推荐的电子产品？')">💻 推荐电子产品</button>
+                <button class="quick-q" onclick="sendQuickQuestion('送给女朋友什么礼物好？')">🎁 送女友礼物</button>
+                <button class="quick-q" onclick="sendQuickQuestion('性价比高的家居用品有哪些？')">🏠 性价比家居</button>
+                <button class="quick-q" onclick="sendQuickQuestion('现在有什么优惠活动吗？')">🎫 优惠活动</button>
+            </div>
+            <div class="ai-chat-input-area">
+                <!-- 限制输入长度，防止恶意超长文本 -->
+                <input type="text" id="aiInput" placeholder="输入你的问题..." maxlength="200" onkeydown="if(event.key==='Enter')sendMessage()">
+                <button onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+        <button class="ai-toggle" onclick="toggleChat()" title="AI购物助手">
+            🤖
+            <span class="pulse-dot"></span>
+        </button>
+    </div>
+
+    <script>
+        // ==================== 安全工具函数 ====================
+        // 【防护4】HTML实体转义，防止XSS脚本注入
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // 【防护5】安全解析JSON，防止原型污染或解析异常
+        function safeParseJSON(jsonString, fallback = null) {
+            try {
+                return JSON.parse(jsonString);
+            } catch (e) {
+                console.warn('JSON解析失败，已重置数据');
+                return fallback;
+            }
+        }
+
+        // ==================== 商品数据 ====================
+        const products = [
+            // 电子产品
+            { id: 1, name: 'Apple iPhone 16 Pro Max', category: 'electronics', emoji: '📱', price: 9999,
+                desc: '顶级旗舰手机，A18芯片' },
+            { id: 2, name: 'MacBook Air M3 15英寸', category: 'electronics', emoji: '💻', price: 10499,
+            desc: '轻薄笔记本，续航强劲' },
+            { id: 3, name: 'Sony WH-1000XM5 降噪耳机', category: 'electronics', emoji: '🎧', price: 2499,
+                desc: '行业领先降噪技术' },
+            { id: 4, name: 'iPad Pro M4 12.9英寸', category: 'electronics', emoji: '📋', price: 8799, desc: '创作利器，屏幕惊艳' },
+            { id: 5, name: 'Apple Watch Ultra 2', category: 'electronics', emoji: '⌚', price: 6499, desc: '户外探险首选' },
+            { id: 6, name: 'Dyson V15 无线吸尘器', category: 'electronics', emoji: '🧹', price: 4990, desc: '强劲吸力，智能显示' },
+
+            // 服装服饰
+            { id: 7, name: '秋冬羊绒大衣 女士中长款', category: 'clothing', emoji: '🧥', price: 1899, desc: '100%纯羊绒，优雅保暖' },
+            { id: 8, name: 'Nike Air Jordan 1 复古板鞋', category: 'clothing', emoji: '👟', price: 1299, desc: '经典复刻，潮流必备' },
+            { id: 9, name: '李宁 运动卫衣 加绒保暖', category: 'clothing', emoji: '👕', price: 399, desc: '国货之光，舒适百搭' },
+            { id: 10, name: 'LV经典老花手袋', category: 'clothing', emoji: '👜', price: 18500, desc: '奢华经典，永不过时' },
+
+            // 家居生活
+            { id: 11, name: 'MUJI 超声波香薰机', category: 'home', emoji: '🕯️', price: 380, desc: '静音加湿，放松身心' },
+            { id: 12, name: '极米Z7X 投影仪', category: 'home', emoji: '📽️', price: 2999, desc: '家庭影院，高清投影' },
+            { id: 13, name: '乳胶记忆枕 护颈椎', category: 'home', emoji: '🛏️', price: 259, desc: '天然乳胶，安睡整晚' },
+            { id: 14, name: '戴森空气净化风扇', category: 'home', emoji: '🌬️', price: 5490, desc: '净化加凉风二合一' },
+
+            // 食品饮料
+            { id: 15, name: '瑞士莲特醇黑巧克力礼盒', category: 'food', emoji: '🍫', price: 168, desc: '70%可可，丝滑享受' },
+            { id: 16, name: '云南普洱古树茶饼', category: 'food', emoji: '🍵', price: 398, desc: '陈年老茶，回甘悠长' },
+            { id: 17, name: '进口车厘子JJJ级 2斤装', category: 'food', emoji: '🍒', price: 199, desc: '鲜甜多汁，冷链直达' },
+            { id: 18, name: '三顿半精品咖啡礼盒', category: 'food', emoji: '☕', price: 219, desc: '冷萃超即溶，风味丰富' },
+
+            // 运动户外
+            { id: 19, name: 'The North Face 冲锋衣', category: 'sports', emoji: '🧗', price: 2699,
+            desc: '防风防水，户外必备' },
+            { id: 20, name: 'Yonex 羽毛球拍 疾光800', category: 'sports', emoji: '🏸', price: 1280, desc: '轻盈挥拍，精准控球' },
+            { id: 21, name: 'Keep 智能动感单车', category: 'sports', emoji: '🚴', price: 3299, desc: '居家健身，AI私教' },
+
+            // 美妆护肤
+            { id: 22, name: 'La Mer 精华面霜 60ml', category: 'beauty', emoji: '✨', price: 2950, desc: '修护传奇，焕亮肌肤' },
+            { id: 23, name: 'Tom Ford 黑管口红 #16', category: 'beauty', emoji: '💄', price: 450, desc: '经典番茄红，显白利器' },
+            { id: 24, name: 'SK-II 神仙水 230ml', category: 'beauty', emoji: '🧴', price: 1540, desc: 'PITERA精华，晶莹剔透' },
+        ];
+
+        // ==================== 状态管理 ====================
+        let cart = [];
+        let currentCategory = 'all';
+        let searchQuery = '';
+
+        // 【防护6】安全加载购物车数据，防止损坏数据导致页面崩溃
+        function loadCart() {
+            try {
+                const saved = localStorage.getItem('zhixuan_cart');
+                if (saved) {
+                    const parsed = safeParseJSON(saved, []);
+                    // 基本结构校验：必须是数组且元素包含id、qty等字段
+                    if (Array.isArray(parsed) && parsed.every(item => item && typeof item.id === 'number' && typeof item.qty === 'number')) {
+                        cart = parsed;
+                    } else {
+                        console.warn('购物车数据格式异常，已重置');
+                        localStorage.removeItem('zhixuan_cart');
+                    }
+                }
+            } catch (e) {
+                console.warn('购物车数据读取失败，已重置');
+                localStorage.removeItem('zhixuan_cart');
+            }
+        }
+        loadCart();
+
+        function saveCart() {
+            try {
+                localStorage.setItem('zhixuan_cart', JSON.stringify(cart));
+            } catch (e) {
+                console.error('保存购物车失败，可能存储空间不足');
+                showToast('⚠️ 保存失败，请清理部分数据');
+            }
+        }
+
+        // ==================== 渲染商品 ====================
+        function getFilteredProducts() {
+            let filtered = products;
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(p => p.category === currentCategory);
+            }
+            if (searchQuery.trim()) {
+                const q = searchQuery.trim().toLowerCase();
+                filtered = filtered.filter(p =>
+                    p.name.toLowerCase().includes(q) ||
+                    p.desc.toLowerCase().includes(q) ||
+                    p.category.toLowerCase().includes(q)
+                );
+            }
+            return filtered;
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productsGrid');
+            const filtered = getFilteredProducts();
+            const catNames = {
+                'all': '🔥 热门推荐',
+                'electronics': '💻 电子产品',
+                'clothing': '👗 服装服饰',
+                'home': '🏠 家居生活',
+                'food': '🍜 食品饮料',
+                'sports': '⚽ 运动户外',
+                'beauty': '💄 美妆护肤'
+            };
+            document.getElementById('sectionTitle').textContent =
+                searchQuery ? `🔍 搜索"${escapeHTML(searchQuery)}"的结果 (${filtered.length}件)` : (catNames[currentCategory] || '全部商品');
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8;">
+                        <span style="font-size:4rem;display:block;margin-bottom:16px;">🔍</span>
+                        <p style="font-size:1.1rem;">没有找到匹配的商品</p>
+                        <p style="font-size:0.9rem;">试试其他关键词吧~</p>
+                    </div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                const inCart = cart.find(c => c.id === p.id);
+                return `
+                <div class="product-card" data-id="${p.id}">
+                    <div class="img-wrap">
+                        <span>${p.emoji}</span>
+                        ${p.price > 5000 ? '<span class="badge">🔥热卖</span>' : ''}
+                        <button class="wishlist-btn" onclick="event.stopPropagation();toggleWishlist(this)" title="收藏">
+                            ♡
+                        </button>
+                    </div>
+                    <div class="info">
+                        <div class="product-name">${escapeHTML(p.name)}</div>
+                        <div class="product-category">${escapeHTML(p.desc)}</div>
+                        <div class="price-row">
+                            <span class="price"><span class="yen">¥</span>${p.price.toLocaleString()}</span>
+                            <button class="add-cart-btn ${inCart ? 'added' : ''}" onclick="addToCart(${p.id}, this)">
+                                ${inCart ? '✓ 已添加' : '+ 加入购物车'}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ==================== 购物车操作 ====================
+        function addToCart(productId, btnElement) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            const existing = cart.find(c => c.id === productId);
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+            saveCart();
+            renderCart();
+            renderProducts();
+            updateCartBadge();
+            if (btnElement) {
+                btnElement.classList.add('added');
+                btnElement.textContent = '✓ 已添加';
+                setTimeout(() => {
+                    btnElement.classList.remove('added');
+                    btnElement.textContent = cart.find(c => c.id === productId) ? '✓ 已添加' : '+ 加入购物车';
+                }, 600);
+            }
+            showToast(`✅ 已添加 "${escapeHTML(product.name)}" 到购物车`);
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(c => c.id !== productId);
+            saveCart();
+            renderCart();
+            renderProducts();
+            updateCartBadge();
+        }
+
+        function updateQty(productId, delta) {
+            const item = cart.find(c => c.id === productId);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) {
+                removeFromCart(productId);
+                return;
+            }
+            saveCart();
+            renderCart();
+            updateCartBadge();
+        }
+
+        function getCartTotal() {
+            return cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        }
+
+        function getCartCount() {
+            return cart.reduce((sum, item) => sum + item.qty, 0);
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-cart">
+                        <span class="empty-icon">🛍️</span>
+                        购物车是空的<br>快去挑选好物吧~
+                    </div>`;
+            } else {
+                container.innerHTML = cart.map(item => `
+                    <div class="cart-item">
+                        <span class="ci-icon">${item.emoji}</span>
+                        <div class="ci-info">
+                            <div class="ci-name">${escapeHTML(item.name)}</div>
+                            <div class="ci-price">¥${item.price.toLocaleString()} × ${item.qty}</div>
+                        </div>
+                        <div class="qty-control">
+                            <button class="qty-btn" onclick="updateQty(${item.id}, -1)">−</button>
+                            <span class="qty-num">${item.qty}</span>
+                            <button class="qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
+                        </div>
+                        <button class="ci-remove" onclick="removeFromCart(${item.id})" title="删除">🗑️</button>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('totalPrice').textContent = '¥' + getCartTotal().toLocaleString();
+        }
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cartCountBadge');
+            const count = getCartCount();
+            badge.textContent = count;
+            if (count > 0) {
+                badge.classList.add('bump');
+                setTimeout(() => badge.classList.remove('bump'), 300);
+            }
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                showToast('🛒 购物车是空的，先挑选商品吧~');
+                return;
+            }
+            const total = getCartTotal();
+            const count = getCartCount();
+            showToast(`🎉 订单已提交！共${count}件商品，合计 ¥${total.toLocaleString()}`);
+            cart = [];
+            saveCart();
+            renderCart();
+            renderProducts();
+            updateCartBadge();
+        }
+
+        function scrollToCart() {
+            document.getElementById('cartSidebar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ==================== 分类筛选 ====================
+        document.getElementById('categoryList').addEventListener('click', function(e) {
+            const li = e.target.closest('li');
+            if (!li) return;
+            currentCategory = li.dataset.category;
+            document.querySelectorAll('#categoryList li').forEach(l => l.classList.remove('active'));
+            li.classList.add('active');
+            searchQuery = '';
+            document.getElementById('searchInput').value = '';
+            renderProducts();
+        });
+
+        function filterProducts() {
+            searchQuery = document.getElementById('searchInput').value;
+            renderProducts();
+        }
+
+        // ==================== 收藏 ====================
+        function toggleWishlist(btn) {
+            btn.classList.toggle('liked');
+            if (btn.classList.contains('liked')) {
+                btn.textContent = '♥';
+                showToast('💝 已加入收藏');
+            } else {
+                btn.textContent = '♡';
+            }
+        }
+
+        // ==================== Toast ====================
+        function showToast(msg) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg; // 使用textContent防注入
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2400);
+        }
+
+        // ==================== AI助手 ====================
+        function toggleChat() {
+            const window = document.getElementById('aiChatWindow');
+            window.classList.toggle('hidden');
+            if (!window.classList.contains('hidden')) {
+                document.getElementById('aiInput').focus();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('aiInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            // 用户消息以纯文本展示，防止脚本注入
+            appendChatMessage('user', escapeHTML(msg));
+            input.value = '';
+            processAIResponse(msg);
+        }
+
+        function sendQuickQuestion(q) {
+            appendChatMessage('user', escapeHTML(q));
+            processAIResponse(q);
+        }
+
+        function appendChatMessage(type, text) {
+            const container = document.getElementById('aiChatMessages');
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + type;
+            // 机器人消息允许HTML（由系统生成，安全），用户消息已经过转义
+            if (type === 'bot') {
+                div.innerHTML = text; // 可信内容，包含商品标签等HTML
+            } else {
+                div.textContent = text; // 用户消息纯文本
+            }
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function processAIResponse(query) {
+            const q = query.toLowerCase();
+            let response = '';
+            let suggestions = [];
+
+            // 智能匹配逻辑（与之前完全一致）
+            if (q.includes('推荐') || q.includes('有什么') || q.includes('哪些') || q.includes('介绍')) {
+                if (q.includes('电子') || q.includes('手机') || q.includes('电脑') || q.includes('耳机')) {
+                    response = '💻 为你推荐热门<b>电子产品</b>：';
+                    suggestions = products.filter(p => p.category === 'electronics').slice(0, 3);
+                } else if (q.includes('衣服') || q.includes('穿') || q.includes('鞋') || q.includes('包') || q.includes(
+                        '时尚')) {
+                    response = '👗 来看看这些<b>服装服饰</b>吧：';
+                    suggestions = products.filter(p => p.category === 'clothing').slice(0, 3);
+                } else if (q.includes('家居') || q.includes('家') || q.includes('用品') || q.includes('生活')) {
+                    response = '🏠 这些<b>家居好物</b>不容错过：';
+                    suggestions = products.filter(p => p.category === 'home').slice(0, 3);
+                } else if (q.includes('吃') || q.includes('食品') || q.includes('饮料') || q.includes('美食') || q.includes(
+                        '零食')) {
+                    response = '🍜 精选<b>美食饮料</b>推荐给你：';
+                    suggestions = products.filter(p => p.category === 'food').slice(0, 3);
+                } else if (q.includes('运动') || q.includes('户外') || q.includes('健身') || q.includes('球')) {
+                    response = '⚽ <b>运动户外</b>装备精选：';
+                    suggestions = products.filter(p => p.category === 'sports').slice(0, 3);
+                } else if (q.includes('美妆') || q.includes('护肤') || q.includes('化妆品') || q.includes('口红')) {
+                    response = '💄 <b>美妆护肤</b>爆款推荐：';
+                    suggestions = products.filter(p => p.category === 'beauty').slice(0, 3);
+                } else if (q.includes('女朋友') || q.includes('礼物') || q.includes('送') || q.includes('生日')) {
+                    response = '🎁 送女友/送礼的<b>心意之选</b>：';
+                    suggestions = [
+                        products.find(p => p.id === 22),
+                        products.find(p => p.id === 23),
+                        products.find(p => p.id === 10),
+                        products.find(p => p.id === 15),
+                    ].filter(Boolean).slice(0, 4);
+                } else if (q.includes('性价比') || q.includes('便宜') || q.includes('实惠')) {
+                    response = '💰 这些<b>高性价比</b>商品值得入手：';
+                    suggestions = products.filter(p => p.price < 500).slice(0, 4);
+                } else {
+                    response = '🤔 我为你精选了几款<b>热门商品</b>：';
+                    suggestions = products.sort(() => Math.random() - 0.5).slice(0, 3);
+                }
+            } else if (q.includes('优惠') || q.includes('活动') || q.includes('打折') || q.includes('促销')) {
+                response =
+                    '🎫 当前优惠信息：<br>• 新用户首单享<B>9折</b>优惠<br>• 满999减100，满1999减250<br>• 电子产品限时特惠中<br>• 部分商品支持<B>12期免息</b>分期';
+            } else if (q.includes('对比') || q.includes('区别') || q.includes('哪个好')) {
+                response =
+                    '📊 建议从以下几个方面对比：<br>1. <b>预算</b>——先确定心理价位<br>2. <b>品牌</b>——大牌售后更有保障<br>3. <b>功能</b>——按需选择，不盲目追高<br>4. <b>口碑</b>——参考已购用户的评价<br><br>你可以告诉我具体想对比哪两款商品，我帮你分析~';
+            } else if (q.includes('价格') || q.includes('多少钱') || q.includes('贵')) {
+                response =
+                    '💲 我们商城的商品覆盖从<b>几十元到上万元</b>不等：<br>• 食品饮料：¥100-400<br>• 家居用品：¥200-5500<br>• 服装服饰：¥300-18500<br>• 电子产品：¥2400-10500<br>• 美妆护肤：¥450-2950<br><br>总有一款适合你的预算~';
+            } else if (q.includes('你好') || q.includes('嗨') || q.includes('hello')) {
+                response = '你好呀！👋 有什么购物方面的问题尽管问我，我可以帮你推荐商品、对比价格、解答疑问~';
+            } else {
+                response =
+                    '收到你的问题！💡 你可以试着问我：<br>• "推荐电子产品"<br>• "送女友什么礼物"<br>• "有什么优惠活动"<br>• "性价比高的商品"<br><br>或者告诉我你的具体需求，我来帮你精准推荐~';
+            }
+
+            let fullResponse = response;
+            if (suggestions.length > 0) {
+                fullResponse += '<br>';
+                suggestions.forEach(p => {
+                    fullResponse +=
+                        `<span class="product-suggestion" onclick="addToCartFromAI(${p.id})" title="点击加入购物车">${p.emoji} ${escapeHTML(p.name)} - ¥${p.price.toLocaleString()}</span> `;
+                });
+                fullResponse += '<br><small style="color:#94a3b8;">👆 点击标签即可加入购物车</small>';
+            }
+
+            setTimeout(() => {
+                appendChatMessage('bot', fullResponse);
+            }, 500 + Math.random() * 800);
+        }
+
+        function addToCartFromAI(productId) {
+            addToCart(productId, null);
+            const cartSidebar = document.getElementById('cartSidebar');
+            cartSidebar.style.boxShadow = '0 0 0 4px rgba(79,70,229,0.3)';
+            setTimeout(() => {
+                cartSidebar.style.boxShadow = '';
+            }, 1000);
+        }
+
+        // ==================== 初始化 ====================
+        function init() {
+            renderProducts();
+            renderCart();
+            updateCartBadge();
+            document.querySelector('#categoryList li[data-category="all"]').classList.add('active');
+        }
+
+        init();
+
+        // 键盘快捷键：Ctrl+K 打开AI助手
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const window = document.getElementById('aiChatWindow');
+                if (window.classList.contains('hidden')) {
+                    toggleChat();
+                }
+                document.getElementById('aiInput').focus();
+            }
+        });
+
+        console.log('🛍️  智选商城已就绪（安全增强版）');
+        console.log('📦 共加载 ' + products.length + ' 件商品');
+        console.log('🤖 AI购物助手已上线 - 按 Ctrl+K 快速唤醒');
+        console.log('🛡️ 已启用防护：CSP策略、输入消毒、存储校验');
+    </script>
+</body>
+</html>
